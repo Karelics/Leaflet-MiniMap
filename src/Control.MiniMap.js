@@ -220,12 +220,17 @@
 			} else {
 				this._miniMapMoving = false;
 			}
-			this._aimingRect.setBounds(this._mainMap.getBounds());
-		},
+      this._updateAimingRect();
+    },
 
-		_onMainMapMoving: function (e) {
-			this._aimingRect.setBounds(this._mainMap.getBounds());
-		},
+    _onMainMapMoving: function (e) {
+      this._updateAimingRect();
+    },
+
+    _updateAimingRect: function() {
+      this._aimingRect.setBounds(this._mainMap.getBounds());
+      this.options?.onUpdateAimingRect(this._aimingRect);
+    },
 
 		_onMiniMapMoveStarted: function (e) {
 			if (!this.options.centerFixed) {
