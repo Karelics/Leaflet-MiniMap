@@ -62,17 +62,28 @@
 			L.DomEvent.disableClickPropagation(this._container);
 			L.DomEvent.on(this._container, 'mousewheel', L.DomEvent.stopPropagation);
 
+			var touchZoom = this.options.mapOptions.touchZoom;
+			var scrollWheelZoom = this.options.mapOptions.scrollWheelZoom;
+			var doubleClickZoom = this.options.mapOptions.doubleClickZoom;
+
 			var mapOptions = {
 				attributionControl: false,
 				dragging: !this.options.centerFixed,
 				zoomControl: false,
 				zoomAnimation: this.options.zoomAnimation,
 				autoToggleDisplay: this.options.autoToggleDisplay,
-				touchZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
-				scrollWheelZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
-				doubleClickZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				touchZoom: this._isDefined(touchZoom)
+					? touchZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				scrollWheelZoom: this._isDefined(scrollWheelZoom)
+					? scrollWheelZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				doubleClickZoom: this._isDefined(doubleClickZoom)
+					? doubleClickZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
 				boxZoom: !this._isZoomLevelFixed(),
-				crs: map.options.crs
+				crs: map.options.crs,
+				...this.options.mapOptions,
 			};
 			mapOptions = L.Util.extend(this.options.mapOptions, mapOptions);  // merge with priority of the local mapOptions object.
 
