@@ -139,6 +139,24 @@
 			this._miniMap.addLayer(this._layer);
 		},
 
+		updateFixedZoomLevel(zoomLevel) {
+			if (!this._isZoomLevelFixed()) {
+				throw new Error("Zoom level is not fixed");
+			}
+
+      this.options.zoomLevelFixed = zoomLevel;
+      this._decideZoom(true);
+    },
+
+    updateFixedCenter(center) {
+			if (!this._isCenterFixed()) {
+				throw new Error("Center is not fixed");
+			}
+
+      this.options.centerFixed = center;
+      this._miniMap.setView(center, this._decideZoom(true));
+    },
+
 		_addToggleButton: function () {
 			this._toggleDisplayButton = this.options.toggleDisplay ? this._createButton(
 				'', this._toggleButtonInitialTitleText(), ('leaflet-control-minimap-toggle-display leaflet-control-minimap-toggle-display-' +
@@ -262,6 +280,8 @@
 		},
 
 		_onMiniMapMoved: function (e) {
+			if (this.options.centerFixed) return;
+
 			if (!this._mainMapMoving) {
 				this._miniMapMoving = true;
 				this._mainMap.setView(this._miniMap.getCenter(), this._decideZoom(false));
@@ -274,6 +294,10 @@
 		_isZoomLevelFixed: function () {
 			var zoomLevelFixed = this.options.zoomLevelFixed;
 			return this._isDefined(zoomLevelFixed) && this._isInteger(zoomLevelFixed);
+		},
+
+		_isCenterFixed: function () {
+			return this._isDefined(this.options.centerFixed);
 		},
 
 		_decideZoom: function (fromMaintoMini) {
