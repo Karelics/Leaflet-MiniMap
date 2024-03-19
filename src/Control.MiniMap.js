@@ -104,7 +104,10 @@
 			}
 
 			this._miniMap.whenReady(L.Util.bind(function () {
-				this._aimingRect = L.rectangle(this._mainMap.getBounds(), this.options.aimingRectOptions).addTo(this._miniMap);
+				this._aimingRect = L.rectangle(
+					this.options?.aimingRectLatLngsGetter?.() ?? this._mainMap.getBounds(),
+					this.options.aimingRectOptions
+				).addTo(this._miniMap);
 				this._shadowRect = L.rectangle(this._mainMap.getBounds(), this.options.shadowRectOptions).addTo(this._miniMap);
 				this._mainMap.on('moveend', this._onMainMapMoved, this);
 				this._mainMap.on('move', this._onMainMapMoving, this);
@@ -257,7 +260,12 @@
     },
 
     _updateAimingRect: function() {
-      this._aimingRect.setBounds(this._mainMap.getBounds());
+			if (typeof this.options?.aimingRectLatLngsGetter === 'function') {
+        this._aimingRect.setLatLngs(this.options?.aimingRectLatLngsGetter());
+      } else {
+        this._aimingRect.setBounds(this._mainMap.getBounds());
+      }
+
       this.options?.onUpdateAimingRect(this._aimingRect);
     },
 
