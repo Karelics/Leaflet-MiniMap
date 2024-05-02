@@ -38,6 +38,7 @@
 			collapsedHeight: 19,
 			aimingRectOptions: {color: '#ff7800', weight: 1, interactive: false},
 			shadowRectOptions: {color: '#000000', weight: 1, interactive: false, opacity: 0, fillOpacity: 0},
+			showToggleText: false,
 			strings: {hideText: 'Hide MiniMap', showText: 'Show MiniMap'},
 			mapOptions: {}  // Allows definition / override of Leaflet map options.
 		},
@@ -170,6 +171,10 @@
 		},
 
 		_toggleButtonInitialTitleText: function () {
+			if (!this.options.showToggleText) {
+				return null;
+			}
+
 			if (this.options.minimized) {
 				return this.options.strings.showText;
 			} else {
@@ -178,21 +183,23 @@
 		},
 
 		_createButton: function (html, title, className, container, fn, context) {
-			var link = L.DomUtil.create('a', className, container);
-			link.innerHTML = html;
-			link.href = '#';
-			link.title = title;
+			var button = L.DomUtil.create('button', className, container);
+			button.innerHTML = html;
+
+			if (title) {
+				button.title = title;
+			}
 
 			var stop = L.DomEvent.stopPropagation;
 
 			L.DomEvent
-				.on(link, 'click', stop)
-				.on(link, 'mousedown', stop)
-				.on(link, 'dblclick', stop)
-				.on(link, 'click', L.DomEvent.preventDefault)
-				.on(link, 'click', fn, context);
+				.on(button, 'click', stop)
+				.on(button, 'mousedown', stop)
+				.on(button, 'dblclick', stop)
+				.on(button, 'click', L.DomEvent.preventDefault)
+				.on(button, 'click', fn, context);
 
-			return link;
+			return button;
 		},
 
 		_toggleDisplayButtonClicked: function () {
@@ -220,7 +227,11 @@
 				this._container.style.width = this.options.collapsedWidth + 'px';
 				this._container.style.height = this.options.collapsedHeight + 'px';
 				this._toggleDisplayButton.className += (' minimized-' + this.options.position);
-				this._toggleDisplayButton.title = this.options.strings.showText;
+
+				if (this.options.showToggleText) {
+					this._toggleDisplayButton.title = this.options.strings.showText;
+				}
+
 			} else {
 				this._container.style.display = 'none';
 			}
@@ -234,7 +245,10 @@
 				this._container.style.height = this.options.height + 'px';
 				this._toggleDisplayButton.className = this._toggleDisplayButton.className
 					.replace('minimized-'	+ this.options.position, '');
-				this._toggleDisplayButton.title = this.options.strings.hideText;
+
+				if (this.options.showToggleText) {
+					this._toggleDisplayButton.title = this.options.strings.hideText;
+				}
 			} else {
 				this._container.style.display = 'block';
 			}
