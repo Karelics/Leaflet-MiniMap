@@ -25,9 +25,9 @@
     "happiness": "^1.0.7",
     "leaflet": ">=1.0.3",
     "ncp": "1.0.1",
-    "svg2png": "1.1.0",
+    "svg2png": "4.1.1",
     "svgo": "0.5.0",
-    "uglify-js": "2.6.0"
+    "uglify-js": "3.17.4"
   },
   "scripts": {
     "build:js": "uglifyjs  --output dist/Control.MiniMap.min.js src/Control.MiniMap.js",
@@ -42,5 +42,8 @@
       "define",
       "L"
     ]
+  },
+  "dependencies": {
+    "pn": "^1.1.0"
   }
 }

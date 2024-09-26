@@ -38,6 +38,7 @@
 			collapsedHeight: 19,
 			aimingRectOptions: {color: '#ff7800', weight: 1, interactive: false},
 			shadowRectOptions: {color: '#000000', weight: 1, interactive: false, opacity: 0, fillOpacity: 0},
+			showToggleText: false,
 			strings: {hideText: 'Hide MiniMap', showText: 'Show MiniMap'},
 			mapOptions: {}  // Allows definition / override of Leaflet map options.
 		},
@@ -62,17 +63,28 @@
 			L.DomEvent.disableClickPropagation(this._container);
 			L.DomEvent.on(this._container, 'mousewheel', L.DomEvent.stopPropagation);
 
+			var touchZoom = this.options.mapOptions.touchZoom;
+			var scrollWheelZoom = this.options.mapOptions.scrollWheelZoom;
+			var doubleClickZoom = this.options.mapOptions.doubleClickZoom;
+
 			var mapOptions = {
 				attributionControl: false,
 				dragging: !this.options.centerFixed,
 				zoomControl: false,
 				zoomAnimation: this.options.zoomAnimation,
 				autoToggleDisplay: this.options.autoToggleDisplay,
-				touchZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
-				scrollWheelZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
-				doubleClickZoom: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				touchZoom: this._isDefined(touchZoom)
+					? touchZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				scrollWheelZoom: this._isDefined(scrollWheelZoom)
+					? scrollWheelZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
+				doubleClickZoom: this._isDefined(doubleClickZoom)
+					? doubleClickZoom
+					: this.options.centerFixed ? 'center' : !this._isZoomLevelFixed(),
 				boxZoom: !this._isZoomLevelFixed(),
-				crs: map.options.crs
+				crs: map.options.crs,
+				...this.options.mapOptions,
 			};
 			mapOptions = L.Util.extend(this.options.mapOptions, mapOptions);  // merge with priority of the local mapOptions object.
 
@@ -93,7 +105,10 @@
 			}
 
 			this._miniMap.whenReady(L.Util.bind(function () {
-				this._aimingRect = L.rectangle(this._mainMap.getBounds(), this.options.aimingRectOptions).addTo(this._miniMap);
+				this._aimingRect = L.rectangle(
+					this.options?.aimingRectLatLngsGetter?.() ?? this._mainMap.getBounds(),
+					this.options.aimingRectOptions
+				).addTo(this._miniMap);
 				this._shadowRect = L.rectangle(this._mainMap.getBounds(), this.options.shadowRectOptions).addTo(this._miniMap);
 				this._mainMap.on('moveend', this._onMainMapMoved, this);
 				this._mainMap.on('move', this._onMainMapMoving, this);
@@ -128,6 +143,24 @@
 			this._miniMap.addLayer(this._layer);
 		},
 
+		updateFixedZoomLevel(zoomLevel) {
+			if (!this._isZoomLevelFixed()) {
+				throw new Error("Zoom level is not fixed");
+			}
+
+      this.options.zoomLevelFixed = zoomLevel;
+      this._decideZoom(true);
+    },
+
+    updateFixedCenter(center) {
+			if (!this._isCenterFixed()) {
+				throw new Error("Center is not fixed");
+			}
+
+      this.options.centerFixed = center;
+      this._miniMap.setView(center, this._decideZoom(true));
+    },
+
 		_addToggleButton: function () {
 			this._toggleDisplayButton = this.options.toggleDisplay ? this._createButton(
 				'', this._toggleButtonInitialTitleText(), ('leaflet-control-minimap-toggle-display leaflet-control-minimap-toggle-display-' +
@@ -138,6 +171,10 @@
 		},
 
 		_toggleButtonInitialTitleText: function () {
+			if (!this.options.showToggleText) {
+				return null;
+			}
+
 			if (this.options.minimized) {
 				return this.options.strings.showText;
 			} else {
@@ -146,21 +183,23 @@
 		},
 
 		_createButton: function (html, title, className, container, fn, context) {
-			var link = L.DomUtil.create('a', className, container);
-			link.innerHTML = html;
-			link.href = '#';
-			link.title = title;
+			var button = L.DomUtil.create('button', className, container);
+			button.innerHTML = html;
+
+			if (title) {
+				button.title = title;
+			}
 
 			var stop = L.DomEvent.stopPropagation;
 
 			L.DomEvent
-				.on(link, 'click', stop)
-				.on(link, 'mousedown', stop)
-				.on(link, 'dblclick', stop)
-				.on(link, 'click', L.DomEvent.preventDefault)
-				.on(link, 'click', fn, context);
+				.on(button, 'click', stop)
+				.on(button, 'mousedown', stop)
+				.on(button, 'dblclick', stop)
+				.on(button, 'click', L.DomEvent.preventDefault)
+				.on(button, 'click', fn, context);
 
-			return link;
+			return button;
 		},
 
 		_toggleDisplayButtonClicked: function () {
@@ -188,7 +227,11 @@
 				this._container.style.width = this.options.collapsedWidth + 'px';
 				this._container.style.height = this.options.collapsedHeight + 'px';
 				this._toggleDisplayButton.className += (' minimized-' + this.options.position);
-				this._toggleDisplayButton.title = this.options.strings.showText;
+
+				if (this.options.showToggleText) {
+					this._toggleDisplayButton.title = this.options.strings.showText;
+				}
+
 			} else {
 				this._container.style.display = 'none';
 			}
@@ -202,7 +245,10 @@
 				this._container.style.height = this.options.height + 'px';
 				this._toggleDisplayButton.className = this._toggleDisplayButton.className
 					.replace('minimized-'	+ this.options.position, '');
-				this._toggleDisplayButton.title = this.options.strings.hideText;
+
+				if (this.options.showToggleText) {
+					this._toggleDisplayButton.title = this.options.strings.hideText;
+				}
 			} else {
 				this._container.style.display = 'block';
 			}
@@ -220,12 +266,22 @@
 			} else {
 				this._miniMapMoving = false;
 			}
-			this._aimingRect.setBounds(this._mainMap.getBounds());
-		},
+      this._updateAimingRect();
+    },
 
-		_onMainMapMoving: function (e) {
-			this._aimingRect.setBounds(this._mainMap.getBounds());
-		},
+    _onMainMapMoving: function (e) {
+      this._updateAimingRect();
+    },
+
+    _updateAimingRect: function() {
+			if (typeof this.options?.aimingRectLatLngsGetter === 'function') {
+        this._aimingRect.setLatLngs(this.options?.aimingRectLatLngsGetter());
+      } else {
+        this._aimingRect.setBounds(this._mainMap.getBounds());
+      }
+
+      this.options?.onUpdateAimingRect(this._aimingRect);
+    },
 
 		_onMiniMapMoveStarted: function (e) {
 			if (!this.options.centerFixed) {
@@ -246,6 +302,8 @@
 		},
 
 		_onMiniMapMoved: function (e) {
+			if (this.options.centerFixed) return;
+
 			if (!this._mainMapMoving) {
 				this._miniMapMoving = true;
 				this._mainMap.setView(this._miniMap.getCenter(), this._decideZoom(false));
@@ -258,6 +316,10 @@
 		_isZoomLevelFixed: function () {
 			var zoomLevelFixed = this.options.zoomLevelFixed;
 			return this._isDefined(zoomLevelFixed) && this._isInteger(zoomLevelFixed);
+		},
+
+		_isCenterFixed: function () {
+			return this._isDefined(this.options.centerFixed);
 		},
 
 		_decideZoom: function (fromMaintoMini) {
